@@ -7,6 +7,7 @@
 #pragma once
 
 #include "LightGlueOnnxRunner.h"
+#include <thread>
 
 int LightGlueOnnxRunner::InitOrtEnv(Configuration cfg)
 {
@@ -39,7 +40,7 @@ int LightGlueOnnxRunner::InitOrtEnv(Configuration cfg)
             std::cout << "[INFO] Env _WIN32 change modelpath from multi byte to wide char ..." << std::endl;
             const wchar_t* modelPath = multi_Byte_To_Wide_Char(cfg.lightgluePath);
         #else
-            const char* modelPath = cfg.lightgluePath;
+            const char* modelPath = cfg.lightgluePath.c_str();
         #endif // _WIN32
 
         session = std::make_unique<Ort::Session>(env , modelPath , session_options);
@@ -48,7 +49,7 @@ int LightGlueOnnxRunner::InitOrtEnv(Configuration cfg)
         InputNodeNames.reserve(numInputNodes);
         for (size_t i = 0 ; i < numInputNodes ; i++)
         {
-            InputNodeNames.emplace_back(_strdup(session->GetInputNameAllocated(i , allocator).get()));
+            InputNodeNames.emplace_back(strdup(session->GetInputNameAllocated(i , allocator).get()));
             InputNodeShapes.emplace_back(session->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
         }
 
@@ -56,7 +57,7 @@ int LightGlueOnnxRunner::InitOrtEnv(Configuration cfg)
         OutputNodeNames.reserve(numOutputNodes);
         for (size_t i = 0 ; i < numOutputNodes ; i++)
         {
-            OutputNodeNames.emplace_back(_strdup(session->GetOutputNameAllocated(i , allocator).get()));
+            OutputNodeNames.emplace_back(strdup(session->GetOutputNameAllocated(i , allocator).get()));
             OutputNodeShapes.emplace_back(session->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
         }
         
@@ -79,12 +80,13 @@ cv::Mat LightGlueOnnxRunner::PreProcess(Configuration cfg , const cv::Mat& Image
     
     std::string fn = "max";
     std::string interp = "area";
-    cv::Mat resultImage = NormalizeImage(ResizeImage(tempImage ,cfg.image_size , scale , fn , interp));
-    if (cfg.extractorType == "superpoint")
-    {
-        std::cout << "[INFO] ExtractorType Superpoint turn RGB to Grayscale" << std::endl;
-        resultImage = RGB2Grayscale(resultImage);
-    }
+    auto tmp_mat = ResizeImage(tempImage ,cfg.image_size , scale , fn , interp);
+    cv::Mat resultImage = NormalizeImage(tmp_mat);
+    // if (cfg.extractorType == "superpoint")
+    // {
+    //     std::cout << "[INFO] ExtractorType Superpoint turn RGB to Grayscale" << std::endl;
+    //     resultImage = RGB2Grayscale(resultImage);
+    // }
     std::cout << "[INFO] Scale from "<< temp_scale << " to "<< scale << std::endl;
    
     return resultImage;
@@ -192,21 +194,21 @@ int LightGlueOnnxRunner::PostProcess(Configuration cfg)
         std::vector<int64_t> kpts0_Shape = output_tensors[0].GetTensorTypeAndShapeInfo().GetShape();
         int64_t* kpts0 = (int64_t*)output_tensors[0].GetTensorMutableData<void>();
         // 在Python里面是一个（batch = 1 , kpts_num , 2）的array，那么在C++里输出的长度就应该是kpts_num * 2
-        printf("[RESULT INFO] kpts0 Shape : (%lld , %lld , %lld)\n" , kpts0_Shape[0] , kpts0_Shape[1] , kpts0_Shape[2]);
+        printf("[RESULT INFO] kpts0 Shape : (%ld , %ld , %ld)\n" , kpts0_Shape[0] , kpts0_Shape[1] , kpts0_Shape[2]);
 
         std::vector<int64_t> kpts1_Shape = output_tensors[1].GetTensorTypeAndShapeInfo().GetShape();
         int64_t* kpts1 = (int64_t*)output_tensors[1].GetTensorMutableData<void>();
-        printf("[RESULT INFO] kpts1 Shape : (%lld , %lld , %lld)\n" , kpts1_Shape[0] , kpts1_Shape[1] , kpts1_Shape[2]);
+        printf("[RESULT INFO] kpts1 Shape : (%ld , %ld , %ld)\n" , kpts1_Shape[0] , kpts1_Shape[1] , kpts1_Shape[2]);
 
         std::vector<int64_t> matches0_Shape = output_tensors[2].GetTensorTypeAndShapeInfo().GetShape();
         int64_t* matches0 = (int64_t*)output_tensors[2].GetTensorMutableData<void>();
         int match0_Counts = matches0_Shape[1];
-        printf("[RESULT INFO] matches0 Shape : (%lld , %lld)\n" , matches0_Shape[0] , matches0_Shape[1]);
+        printf("[RESULT INFO] matches0 Shape : (%ld , %ld)\n" , matches0_Shape[0] , matches0_Shape[1]);
 
         std::vector<int64_t> matches1_Shape = output_tensors[3].GetTensorTypeAndShapeInfo().GetShape();
         int64_t* matches1 = (int64_t*)output_tensors[3].GetTensorMutableData<void>();
         int match1_Counts = matches1_Shape[1];
-        printf("[RESULT INFO] matches1 Shape : (%lld , %lld)\n" , matches1_Shape[0] , matches1_Shape[1]);
+        printf("[RESULT INFO] matches1 Shape : (%ld , %ld)\n" , matches1_Shape[0] , matches1_Shape[1]);
 
         std::vector<int64_t> mscore0_Shape = output_tensors[4].GetTensorTypeAndShapeInfo().GetShape();
         float* mscores0 = (float*)output_tensors[4].GetTensorMutableData<void>();

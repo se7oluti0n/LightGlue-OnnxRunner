@@ -4,7 +4,6 @@
     Date: 2023.08.31
     Description: 
 *********************************/
-#pragma once
 
 #include <iostream>
 #include <thread>
@@ -12,13 +11,14 @@
 #include <chrono>
 #include <algorithm>
 #include <opencv2/opencv.hpp>
+#include <filesystem>
 
-#include "viz2d.h"
-#include "utils.h"
 #include "Configuration.h"
 #include "BaseOnnxRunner.h"
 #include "LightGlueOnnxRunner.h"
 #include "LightGlueDecoupleOnnxRunner.h"
+
+namespace fs = std::filesystem;
 
 
 std::vector<cv::Mat> ReadImage(std::vector<cv::String> image_filelist , bool grayscale = false)
@@ -53,6 +53,49 @@ std::vector<cv::Mat> ReadImage(std::vector<cv::String> image_filelist , bool gra
     return image_matlist;
 }
 
+std::vector<cv::KeyPoint> UnnormalizeKeypoints(const std::vector<cv::Point2f>& normalized_keypoints, int w, int h) {
+  std::vector<cv::KeyPoint> keypoints;
+
+    cv::Size size(w, h);
+    cv::Point2f shift(static_cast<float>(w) / 2, static_cast<float>(h) / 2);
+    float scale = static_cast<float>((std::max)(w, h)) / 2;
+
+    std::vector<cv::Point2f> normalizedKpts;
+    for (const cv::Point2f& kpt : normalized_keypoints) {
+        cv::Point2f ret = kpt * scale + shift;
+        cv::KeyPoint kp;
+        kp.pt = ret;
+        keypoints.push_back(kp);
+
+
+        // std::cout << "(" << ret.x << ", " << ret.y << ")  ";
+    }
+
+    std::cout << std::endl;
+
+    return keypoints;
+}
+
+cv::Mat DrawMatches(const cv::Mat& src_img, const std::vector<cv::Point2f>& src_kps_normalized,
+                    const cv::Mat& dst_img, const std::vector<cv::Point2f>& dst_kps_normalized) {
+
+    
+    std::cout << "SRC Keypoints: " << std::endl;
+    auto src_kps = UnnormalizeKeypoints(src_kps_normalized, src_img.cols, src_img.rows);
+    std::cout << "DST Keypoints: " << std::endl;
+    auto dst_kps = UnnormalizeKeypoints(dst_kps_normalized, dst_img.cols, dst_img.rows);
+
+    std::vector<cv::DMatch> matches;
+    for (size_t i = 0; i < src_kps.size(); i++) {
+      matches.emplace_back(i, i, 0);
+    }
+
+    cv::Mat outImg;
+    cv::drawMatches(src_img, src_kps, dst_img, dst_kps, matches, outImg, 1);
+    
+    return outImg;
+}
+
 
 int main(int argc , char* argv[])
 {
@@ -77,22 +120,23 @@ int main(int argc , char* argv[])
     /* ****** CONFIG END ****** */
     
     /* ****** Usage Example Start ****** */
-    image_path1 = "D:\\OroChiLab\\LightGlue\\data\\dir_0";
-    image_path2 = "D:\\OroChiLab\\LightGlue\\data\\dir_1";
+    image_path1 = "/home/dell/Desktop/2/dir_0";
+    image_path2 = "/home/dell/Desktop/2/dir_1";
+    // image_path2 = "D:\\OroChiLab\\LightGlue\\data\\dir_1";
     device = "cuda";
     
     // End to End 
-    end2end = true;
-    lightglue_path = "D:\\OroChiLab\\LightGlue-OnnxRunner\\models\\superpoint\\superpoint_lightglue_end2end.onnx";
-    extractor_type = "SuperPoint";
+    // end2end = true;
+    // lightglue_path = "D:\\OroChiLab\\LightGlue-OnnxRunner\\models\\superpoint\\superpoint_lightglue_end2end.onnx";
+    // extractor_type = "SuperPoint";
     // lightglue_path = "D:\\OroChiLab\\LightGlue\\weights\\onnx\\disk_lightglue_end2end.onnx";
     // extractor_type = "Disk";
 
     // Decouple
-    // end2end = false;
-    // extractor_path = "D:\\OroChiLab\\LightGlue-OnnxRunner\\models\\superpoint\\superpoint.onnx";
-    // lightglue_path = "D:\\OroChiLab\\LightGlue-OnnxRunner\\models\\superpoint\\superpoint_lightglue.onnx";
-    // extractor_type = "SuperPoint";
+    end2end = false;
+    extractor_path = "/home/dell/Downloads/superpoint.onnx";
+    lightglue_path = "/home/dell/Downloads/superpoint_lightglue.onnx";
+    extractor_type = "SuperPoint";
     // extractor_path = "D:\\OroChiLab\\LightGlue-OnnxRunner\\models\\disk\\disk.onnx";
     // lightglue_path = "D:\\OroChiLab\\LightGlue-OnnxRunner\\models\\disk\\disk_lightglue.onnx";
     // extractor_type = "Disk";
@@ -124,11 +168,11 @@ int main(int argc , char* argv[])
     }
 
 
-    if (fileExists(cfg.lightgluePath))
+    if (fs::exists(cfg.lightgluePath))
     {
         if (cfg.isEndtoEnd)
         {
-            if (!fileExists(cfg.lightgluePath))
+            if (!fs::exists(cfg.lightgluePath))
             {
                 std::cerr << "[ERROR] The specified LightGlue mode at is not end-to-end. Please pass the extractor_path argument." << extractor_type << std::endl;
                 return EXIT_FAILURE;
@@ -189,16 +233,25 @@ int main(int argc , char* argv[])
         {
             std::vector<cv::Mat> imagesPair = {*iter1 , *iter2};
             std::vector<std::string> titlePair = {"srcImage" , "destImage"};
-            cv::Mat figure = plotImages(imagesPair , kpts_result , titlePair);
+            // cv:Mat figure = plotImages(imagesPair , kpts_result , titlePair);
+            
+            cv::Mat src_resized, dst_resized;
+            cv::resize(imagesPair[0], src_resized, cv::Size(512, 512));
+            cv::resize(imagesPair[1], dst_resized, cv::Size(512, 512));
+            cv::Mat figure = DrawMatches(src_resized, kpts_result.first, dst_resized, kpts_result.second);
+            cv::imshow("Figure", figure);
+            cv::waitKey(0);
+            cv::destroyAllWindows();
+
         }
         auto kpts = FeatureMatcher->GetKeypointsResult();
     }
     if (cfg.isEndtoEnd)
     {
-        printf("[INFO] End2End model inference %d images mean cost %.2f ms" , image_filelist1.size() , (FeatureMatcher->GetTimer() / image_filelist1.size()));
+        printf("[INFO] End2End model inference %ld images mean cost %.2f ms" , image_filelist1.size() , (FeatureMatcher->GetTimer() / image_filelist1.size()));
     }else
     {
-        printf("[INFO] Decouple model extractor inference %d images mean cost %.2f ms , matcher mean cost %.2f" , image_filelist1.size() , \
+        printf("[INFO] Decouple model extractor inference %ld images mean cost %.2f ms , matcher mean cost %.2f\n" , image_filelist1.size() , \
                     (FeatureMatcher->GetTimer("extractor") / image_filelist1.size()) , (FeatureMatcher->GetTimer() / image_filelist1.size()));
     }
     

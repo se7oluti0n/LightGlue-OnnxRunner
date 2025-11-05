@@ -6,15 +6,12 @@
 *********************************/
 #pragma once
 
-#ifndef LIGHTGLUE_DECOUPLE_ONNX_RUNNER_H
-#define LIGHTGLUE_DECOUPLE_ONNX_RUNNER_H
-
 #include <iostream>
 #include <chrono>
 #include <opencv2/opencv.hpp>
 #include <onnxruntime_cxx_api.h>
 
-#include "utils.h"
+// #include "utils.h"
 #include "transform.h"
 #include "BaseOnnxRunner.h"
 #include "Configuration.h"
@@ -76,4 +73,3 @@ public:
             const cv::Mat& srcImage, const cv::Mat& destImage);
 };
 
-#endif // LIGHT_GLUE_DECOUPLE_ONNX_RUNNER_H

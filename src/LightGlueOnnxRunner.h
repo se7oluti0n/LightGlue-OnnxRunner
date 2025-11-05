@@ -7,14 +7,11 @@
 #pragma once
 #pragma warning(disable:4819) 
 
-#ifndef LIGHTGLUE_ONNX_RUNNER_H
-#define LIGHTGLUE_ONNX_RUNNER_H
-
 #include <opencv2/opencv.hpp>
 #include <onnxruntime_cxx_api.h>
 // #include <cuda_provider_factory.h>  // 若在GPU环境下运行可以使用cuda进行加速
 
-#include "utils.h"
+// #include "utils.h"
 #include "transform.h"
 #include "BaseOnnxRunner.h"
 #include "Configuration.h"
@@ -65,4 +62,3 @@ public:
 
 };
 
-#endif // LIGHTGLUE_ONNX_RUNNER_H
