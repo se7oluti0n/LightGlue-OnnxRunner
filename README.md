@@ -1,4 +1,7 @@
 # LightGlue-OnnxRunner
+## Change log
+- Support Linux (remove code depends on windows)
+- Fix bug in visualization, show wrong matches
 ## Introduction
 LightGlue-OnnxRunner is a repository hosts the C++ inference code of LightGlue in ONNX format. LightGlue is a lightweight feature matcher with high accuracy and blazing fast inference. It takes as input a set of keypoints and descriptors for each image and returns the indices of corresponding points.  
 * Offical Paper : *[LightGlue: Local Feature Matching at Light Speed](https://arxiv.org/pdf/2306.13643.pdf)*  
