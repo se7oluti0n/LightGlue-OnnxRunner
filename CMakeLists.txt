@@ -32,7 +32,7 @@ set(ONNXRUNTIME_GPU_LIB onnxruntime onnxruntime_providers_shared onnxruntime_pro
 # include_directories(${OPENCV_DIR}/include)
 # link_directories("${OPENCV_DIR}/x64/vc16/lib")
 # set(OpenCV_LIB opencv_world480)
-find_package(OpenCV 4.12.0 REQUIRED)
+find_package(OpenCV 4.0.0 REQUIRED)
 
 
 # compile own file
