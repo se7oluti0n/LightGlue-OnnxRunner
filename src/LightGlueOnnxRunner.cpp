@@ -4,7 +4,6 @@
     Date: 2023.08.31
     Description:
 *********************************/
-#pragma once
 
 #include "LightGlueOnnxRunner.h"
 #include <thread>

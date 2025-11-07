@@ -4,8 +4,6 @@
     Date: 2023.09.11
     Description:
 *********************************/
-#pragma once
-
 #include "transform.h"
 
 cv::Mat NormalizeImage(cv::Mat& Image)
